@@ -43,6 +43,22 @@ export interface GekozenBestand {
 }
 
 /**
+ * Het projectnummer uit een client-ID. Die hebben de vorm
+ * "123456789-letters.apps.googleusercontent.com"; het stuk voor het streepje
+ * is het nummer van het Cloud-project.
+ */
+export function projectnummer(clientId: string): string {
+  const nummer = clientId.split('-')[0] ?? '';
+  if (!/^\d+$/.test(nummer)) {
+    throw new Error(
+      `Uit het client-ID is geen projectnummer te halen ("${clientId}"). `
+      + 'Klopt de waarde van GOOGLE_CLIENT_ID?',
+    );
+  }
+  return nummer;
+}
+
+/**
  * Laat de gebruiker een spreadsheet aanwijzen. Geeft null terug als hij het
  * venster wegklikt - dat is geen fout, dat is een keuze.
  */
@@ -66,6 +82,10 @@ export async function kiesSpreadsheet(titel: string): Promise<GekozenBestand | n
     new picker.PickerBuilder()
       .setDeveloperKey(config.apiKey)
       .setOAuthToken(t)
+      // Zonder appId koppelt Google de toestemming aan geen enkele app: je kiest
+      // wel een bestand, maar de app mag er daarna nog steeds niet bij en krijgt
+      // een 404. Het projectnummer staat vooraan in het client-ID.
+      .setAppId(projectnummer(config.clientId))
       .addView(eigen)
       .addView(gedeeld)
       .setTitle(titel)

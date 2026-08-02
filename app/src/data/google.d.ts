@@ -20,6 +20,8 @@ interface GoogleTokenClient {
 interface GooglePickerBouwer {
   setDeveloperKey(sleutel: string): GooglePickerBouwer;
   setOAuthToken(token: string): GooglePickerBouwer;
+  /** Zonder dit weet Google niet welke app toegang moet krijgen tot het gekozen bestand. */
+  setAppId(appId: string): GooglePickerBouwer;
   addView(weergave: unknown): GooglePickerBouwer;
   setTitle(titel: string): GooglePickerBouwer;
   setCallback(fn: (antwoord: GooglePickerAntwoord) => void): GooglePickerBouwer;
