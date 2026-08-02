@@ -1,0 +1,27 @@
+node_modules/
+dist/
+.cache/
+.env
+.env.local
+
+# Persoonlijke gegevens horen niet in deze repo. De repo is openbaar zodat
+# GitHub Pages hem kan uitserveren, dus alles hieronder blijft lokaal.
+#
+# De app vraagt bij de eerste start zelf welke sheets het zijn; er staan
+# nergens sheet-adressen in de code.
+
+# De echte bronsheet en alles wat eruit komt
+*.xlsx
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+app/test/fixtures/bron-echt*.json
+
+# De namenlijst waarmee de testdata wordt opgeschoond. Die lijst is zelf
+# persoonlijk: er staat in wie er weggehaald moet worden.
+app/test/fixtures/namen.local.json
+
+# De oude versie met een eigen server. Vervangen door app/, maar nog niet
+# weggegooid; bevat wel het adres van de echte bronsheet.
+server/

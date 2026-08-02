@@ -1,0 +1,178 @@
+-- Renovatie tool — backend schema
+--
+-- Vervangt het backend-sheet uit het plan. De bronsheet blijft leidend en wordt
+-- nooit geschreven; alles hieronder is wat de app er zelf bij houdt.
+--
+-- Twee soorten kolommen per tabel:
+--   bron_*    overgenomen uit de sheet, wordt bij elke ververs overschreven
+--   de rest   eigendom van de app, blijft staan over een ververs heen
+
+PRAGMA journal_mode = WAL;
+PRAGMA foreign_keys = ON;
+
+-- Taken ---------------------------------------------------------------------
+-- Een taak komt uit de bronsheet (tabblad Fases of Belangrijke datums) of is
+-- met de hand toegevoegd. `sleutel` is de genormaliseerde naam en is waar de
+-- ververs op matcht.
+CREATE TABLE IF NOT EXISTS taken (
+  id                INTEGER PRIMARY KEY,
+  sleutel           TEXT    NOT NULL UNIQUE,
+  naam              TEXT    NOT NULL,
+  bron_tabblad      TEXT,               -- 'Fases' | 'Belangrijke datums' | NULL bij handmatig
+  bron_kolom        TEXT,               -- fase-aanduiding uit de kopregel
+  bron_duur_dagen   REAL,
+  bron_start        TEXT,               -- ISO-datum of NULL
+  bron_eind         TEXT,
+
+  werksoort         TEXT,               -- sloop | elektra | stucwerk | ...
+  werksoort_alt     TEXT,               -- JSON-lijst: andere werksoorten die ook raakten
+  ruimte            TEXT,               -- hoofdruimte; volledige set staat in taak_ruimtes
+  handmatig_ingedeeld INTEGER NOT NULL DEFAULT 0,
+
+  status            TEXT    NOT NULL DEFAULT 'te-doen'
+                    CHECK (status IN ('te-doen','bezig','klaar','vervallen')),
+
+  aanwezig_in_bron  INTEGER NOT NULL DEFAULT 1,
+  aangemaakt_op     TEXT    NOT NULL DEFAULT (datetime('now')),
+  gewijzigd_op      TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Een taak kan meerdere ruimtes raken: "leidingen voor de badkamer (boven) en
+-- wc (beneden)". De standaardvolgorde geldt dan in elk van die ruimtes.
+-- `taken.ruimte` is de eerste hiervan en dient alleen om iets te tonen.
+CREATE TABLE IF NOT EXISTS taak_ruimtes (
+  taak_id INTEGER NOT NULL REFERENCES taken(id) ON DELETE CASCADE,
+  ruimte  TEXT    NOT NULL,
+  primair INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (taak_id, ruimte)
+);
+
+CREATE INDEX IF NOT EXISTS idx_taken_werksoort ON taken(werksoort);
+CREATE INDEX IF NOT EXISTS idx_taken_ruimte    ON taken(ruimte);
+CREATE INDEX IF NOT EXISTS idx_taken_status    ON taken(status);
+
+-- Afhankelijkheden ----------------------------------------------------------
+-- `voor` moet klaar zijn voordat `na` begint. Regel-afgeleide koppelingen
+-- worden bij elke doorrekening opnieuw opgebouwd; handmatige blijven staan.
+-- `onderdrukt` markeert een regel-koppeling die met de hand is weggehaald.
+CREATE TABLE IF NOT EXISTS afhankelijkheden (
+  id          INTEGER PRIMARY KEY,
+  voor_id     INTEGER NOT NULL REFERENCES taken(id) ON DELETE CASCADE,
+  na_id       INTEGER NOT NULL REFERENCES taken(id) ON DELETE CASCADE,
+  herkomst    TEXT    NOT NULL CHECK (herkomst IN ('regel','handmatig')),
+  regel_id    TEXT,
+  onderdrukt  INTEGER NOT NULL DEFAULT 0,
+  aangemaakt_op TEXT  NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (voor_id, na_id, regel_id),
+  CHECK (voor_id <> na_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_afh_voor ON afhankelijkheden(voor_id);
+CREATE INDEX IF NOT EXISTS idx_afh_na   ON afhankelijkheden(na_id);
+
+-- Notities ------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS notities (
+  id        INTEGER PRIMARY KEY,
+  taak_id   INTEGER NOT NULL REFERENCES taken(id) ON DELETE CASCADE,
+  tekst     TEXT    NOT NULL,
+  auteur    TEXT    NOT NULL,   -- naam uit de Google-inlog
+  gemaakt_op TEXT   NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_notities_taak ON notities(taak_id);
+
+-- Sync ----------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sync (
+  tabblad        TEXT PRIMARY KEY,
+  hash           TEXT NOT NULL,
+  rijen          INTEGER NOT NULL,
+  laatste_ververs TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Openstaande hernoem-vragen ------------------------------------------------
+-- Bij een ververs verdwenen naam + nieuwe naam = mogelijk dezelfde taak.
+-- Blijft staan tot iemand antwoordt.
+CREATE TABLE IF NOT EXISTS hernoem_vragen (
+  id            INTEGER PRIMARY KEY,
+  verdwenen_taak_id INTEGER NOT NULL REFERENCES taken(id) ON DELETE CASCADE,
+  nieuwe_naam   TEXT    NOT NULL,
+  nieuwe_sleutel TEXT   NOT NULL,
+  gelijkenis    REAL    NOT NULL,
+  beantwoord    INTEGER NOT NULL DEFAULT 0,
+  gemaakt_op    TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Bestellingen --------------------------------------------------------------
+-- bron_levertijd is vrije tekst uit de sheet; levertijd_dagen is wat de app
+-- eruit heeft weten te lezen (NULL = niet te bepalen, dan geen waarschuwing).
+CREATE TABLE IF NOT EXISTS bestellingen (
+  id                INTEGER PRIMARY KEY,
+  sleutel           TEXT    NOT NULL UNIQUE,
+  naam              TEXT    NOT NULL,
+  bron_leverancier  TEXT,
+  bron_levertijd    TEXT,
+  bron_link         TEXT,
+  bron_prijs        TEXT,
+  bron_datum_nodig  TEXT,
+
+  levertijd_dagen   INTEGER,
+  besteld_op        TEXT,
+  track_en_trace    TEXT,
+  voor_taak_id      INTEGER REFERENCES taken(id) ON DELETE SET NULL,
+
+  aanwezig_in_bron  INTEGER NOT NULL DEFAULT 1,
+  gewijzigd_op      TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Vaklui --------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS vaklui (
+  id                INTEGER PRIMARY KEY,
+  sleutel           TEXT    NOT NULL UNIQUE,
+  functie           TEXT,
+  bedrijf           TEXT    NOT NULL,
+  benaderd          TEXT,
+  bron_status       TEXT,
+  reactie           TEXT,
+  telefoon          TEXT,
+  link              TEXT,
+  prijs             TEXT,
+  via               TEXT,
+
+  -- uit `reactie` gelezen, bijv. "pas plek medio oktober" -> 2026-10-15
+  beschikbaar_vanaf TEXT,
+
+  aanwezig_in_bron  INTEGER NOT NULL DEFAULT 1,
+  gewijzigd_op      TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Koppeling vakman aan taak. Staat niet in de bronsheet, dus puur van de app.
+CREATE TABLE IF NOT EXISTS taak_vakman (
+  taak_id   INTEGER NOT NULL REFERENCES taken(id) ON DELETE CASCADE,
+  vakman_id INTEGER NOT NULL REFERENCES vaklui(id) ON DELETE CASCADE,
+  PRIMARY KEY (taak_id, vakman_id)
+);
+
+-- Budget --------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS budget_categorieen (
+  code       TEXT PRIMARY KEY,          -- '3', '43', ...
+  naam       TEXT NOT NULL,             -- 'Badkamer'
+  blok       TEXT NOT NULL,             -- 'verbouwkosten' | 'allocatie'
+  begroot    REAL,
+  herzien    REAL
+);
+
+CREATE TABLE IF NOT EXISTS uitgaven (
+  id            INTEGER PRIMARY KEY,
+  sleutel       TEXT NOT NULL UNIQUE,
+  datum         TEXT,
+  bedrag        REAL NOT NULL,
+  ontvanger     TEXT,
+  categorie_code TEXT REFERENCES budget_categorieen(code),
+  categorie_ruw TEXT,
+  omschrijving  TEXT,
+  bron          TEXT,
+  betaler       TEXT,
+  factuur       TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_uitgaven_cat ON uitgaven(categorie_code);
