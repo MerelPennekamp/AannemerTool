@@ -18,6 +18,11 @@ dist/
 *.db-shm
 app/test/fixtures/bron-echt*.json
 
+# De sleutels van het Google Cloud-project. Worden bij het bouwen uit
+# GitHub-secrets geschreven; zie config.voorbeeld.json.
+app/config.json
+app/publiek/config.json
+
 # De namenlijst waarmee de testdata wordt opgeschoond. Die lijst is zelf
 # persoonlijk: er staat in wie er weggehaald moet worden.
 app/test/fixtures/namen.local.json
