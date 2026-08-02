@@ -52,7 +52,14 @@ function verklaar(status: number, boodschap: string): string {
     return 'Geen toegang tot deze sheet. De app mag alleen bij bestanden die hij zelf '
       + 'heeft aangemaakt of die je zelf hebt aangewezen.';
   }
-  if (status === 404) return 'Deze sheet bestaat niet (meer).';
+  if (status === 404) {
+    // Met de smalle permissie geeft Google 404 op een bestand waar de app niet
+    // bij mag: dat het bestaat wordt niet eens prijsgegeven. "Niet gevonden"
+    // betekent hier dus meestal "nog niet aangewezen".
+    return 'Geen toegang tot deze sheet, of hij bestaat niet meer. Wijs hem opnieuw aan '
+      + 'met de knop hieronder. Heeft iemand anders hem gemaakt, kijk dan in de '
+      + 'bestandskiezer onder "Gedeeld met mij".';
+  }
   if (status === 429) return 'Google vindt het even te snel gaan. Probeer het zo nog eens.';
   if (status >= 500) return 'Google heeft een storing. Probeer het later nog eens.';
   return boodschap || `Sheets gaf status ${status}.`;
@@ -73,6 +80,14 @@ export async function haalTabbladen(
     if (naam) uit[naam] = bereik.values ?? [];
   });
   return uit;
+}
+
+/**
+ * Kan de app echt bij deze sheet? Meteen na het aanwijzen controleren, zodat
+ * een fout opduikt waar hij te begrijpen is en niet pas bij het ophalen.
+ */
+export async function controleerToegang(sheetId: string): Promise<void> {
+  await haalTabbladnamen(sheetId);
 }
 
 /** Welke tabbladen zitten er in deze sheet? */

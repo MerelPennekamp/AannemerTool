@@ -55,11 +55,19 @@ export async function kiesSpreadsheet(titel: string): Promise<GekozenBestand | n
   if (!picker) throw new Error('De bestandskiezer is niet beschikbaar.');
 
   return new Promise((klaar) => {
-    const weergave = new picker.DocsView(picker.ViewId.SPREADSHEETS);
+    // Twee tabbladen in de kiezer. Zonder de tweede zie je alleen wat je zelf
+    // bezit, en dus niet de sheet die je partner met je heeft gedeeld - precies
+    // het geval dat hier speelt.
+    const eigen = new picker.DocsView(picker.ViewId.SPREADSHEETS)
+      .setOwnedByMe(true).setLabel('Van mij');
+    const gedeeld = new picker.DocsView(picker.ViewId.SPREADSHEETS)
+      .setOwnedByMe(false).setLabel('Gedeeld met mij');
+
     new picker.PickerBuilder()
       .setDeveloperKey(config.apiKey)
       .setOAuthToken(t)
-      .addView(weergave)
+      .addView(eigen)
+      .addView(gedeeld)
       .setTitle(titel)
       .setCallback((antwoord) => {
         if (antwoord.action === picker.Action.CANCEL) return klaar(null);

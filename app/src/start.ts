@@ -1,7 +1,10 @@
 import { laadConfig, ConfigOntbreekt } from './data/config.js';
 import { logIn, haalProfiel, isIngelogd, uitloggen, NietIngelogd } from './data/auth.js';
 import { kiesSpreadsheet } from './data/picker.js';
-import { haalTabbladen, maakSheet, zorgVoorTabbladen, schrijfTabblad, SheetsFout } from './data/sheets.js';
+import {
+  haalTabbladen, haalTabbladnamen, maakSheet, zorgVoorTabbladen, schrijfTabblad,
+  controleerToegang, SheetsFout,
+} from './data/sheets.js';
 import { leesInstellingen, bewaarInstellingen, wisInstellingen, isIngericht } from './data/instellingen.js';
 import { leesBron, TABBLADEN } from './data/bron.js';
 import { leesBackend, legeInhoud, BACKEND_TABBLADEN } from './data/backend.js';
@@ -112,7 +115,18 @@ async function toonInrichten(): Promise<void> {
 
   bezig('#kies-bron', async () => {
     const keuze = await kiesSpreadsheet('Kies de sheet met je planning');
-    if (keuze) bewaarInstellingen({ bronSheetId: keuze.id, bronSheetNaam: keuze.naam });
+    if (!keuze) return;
+    // Direct controleren: een fout hier is te plaatsen, een scherm verderop niet.
+    await controleerToegang(keuze.id);
+    const namen = await haalTabbladnamen(keuze.id);
+    const missend = TABBLADEN.filter((t) => !namen.includes(t));
+    if (missend.length) {
+      throw new Error(
+        `In "${keuze.naam}" ontbreken deze tabbladen: ${missend.join(', ')}. `
+        + 'Weet je zeker dat dit je planning-sheet is?',
+      );
+    }
+    bewaarInstellingen({ bronSheetId: keuze.id, bronSheetNaam: keuze.naam });
   });
 
   bezig('#kies-backend', async () => {

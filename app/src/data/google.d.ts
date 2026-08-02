@@ -26,6 +26,12 @@ interface GooglePickerBouwer {
   build(): { setVisible(zichtbaar: boolean): void };
 }
 
+interface GooglePickerWeergave {
+  /** true toont wat je zelf bezit, false wat een ander met je heeft gedeeld. */
+  setOwnedByMe(eigen: boolean): GooglePickerWeergave;
+  setLabel(tekst: string): GooglePickerWeergave;
+}
+
 interface GooglePickerAntwoord {
   action?: string;
   docs?: { id?: string; name?: string }[];
@@ -50,9 +56,10 @@ interface Window {
     };
     picker?: {
       PickerBuilder: new () => GooglePickerBouwer;
-      DocsView: new (weergave?: unknown) => unknown;
+      DocsView: new (weergave?: unknown) => GooglePickerWeergave;
       ViewId: { SPREADSHEETS: unknown };
       Action: { PICKED: string; CANCEL: string };
+      Feature: { SUPPORT_DRIVES: unknown };
     };
   };
 }
