@@ -18,8 +18,22 @@ export interface Config {
   apiKey: string;
 }
 
-/** Alleen bestanden die de app zelf aanmaakt of die jij aanwijst. */
-export const SCOPE = 'https://www.googleapis.com/auth/drive.file';
+/**
+ * Wat de app aan Google vraagt. Alle drie niet-gevoelig, dus publiceren kan
+ * zonder goedkeuringstraject:
+ *
+ * - drive.file  alleen bestanden die de app zelf aanmaakt of die jij aanwijst
+ * - userinfo.profile  je naam, om notities op naam te kunnen zetten
+ * - openid  hoort bij het inloggen zelf
+ *
+ * Er staat met opzet geen bredere Drive- of Sheets-permissie bij: die zijn wel
+ * gevoelig, en dan eist Google een verificatietraject.
+ */
+export const SCOPE = [
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/userinfo.profile',
+  'openid',
+].join(' ');
 
 let geladen: Config | null = null;
 
