@@ -4,8 +4,9 @@
     {
       "name": "renovatie",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "server", "run", "start"],
-      "port": 4000
+      "runtimeArgs": ["--prefix", "app", "run", "dev"],
+      "port": 5173,
+      "url": "http://localhost:5173"
     }
   ]
 }

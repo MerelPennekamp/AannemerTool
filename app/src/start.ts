@@ -9,6 +9,9 @@ import { leesInstellingen, bewaarInstellingen, wisInstellingen, isIngericht } fr
 import { leesBron, TABBLADEN } from './data/bron.js';
 import { leesBackend, legeInhoud, BACKEND_TABBLADEN } from './data/backend.js';
 import { bouwModel, type Model } from './model.js';
+import { toonSchermen } from './schermen.js';
+import { bewaarStatus, bewaarNotitie } from './data/opslaan.js';
+import type { TaakStand } from './data/backend.js';
 
 /**
  * De opstartkant van de app: inloggen, sheets aanwijzen, gegevens ophalen.
@@ -25,8 +28,14 @@ const vandaag = () => new Date().toISOString().slice(0, 10);
 
 let model: Model | null = null;
 
+/**
+ * Inloggen en inrichten spelen zich af in de hoofdruimte, met de kop en de
+ * tabbladen leeg. Zodra de gegevens binnen zijn neemt schermen.js het over.
+ */
 function toon(inhoud: string): void {
-  $('#app').innerHTML = inhoud;
+  $('#kop').textContent = '';
+  $('#tabs').innerHTML = '';
+  $('#inhoud').innerHTML = `<div class="start">${inhoud}</div>`;
 }
 
 function meldFout(fout: unknown): string {
@@ -152,18 +161,35 @@ async function toonInrichten(): Promise<void> {
   };
 }
 
+/** De sheets ophalen en er een model van maken. Geen tekenwerk. */
+async function laadModel(): Promise<Model> {
+  const i = leesInstellingen();
+  const [bronRasters, backendRasters] = await Promise.all([
+    haalTabbladen(i.bronSheetId, [...TABBLADEN]),
+    haalTabbladen(i.backendSheetId, BACKEND_TABBLADEN),
+  ]);
+  model = bouwModel(leesBron(bronRasters), leesBackend(backendRasters), vandaag());
+  return model;
+}
+
 async function laadEnToon(): Promise<void> {
   const i = leesInstellingen();
   toon('<p class="uitleg">Bezig met ophalen...</p>');
 
   try {
-    const [bronRasters, backendRasters] = await Promise.all([
-      haalTabbladen(i.bronSheetId, [...TABBLADEN]),
-      haalTabbladen(i.backendSheetId, BACKEND_TABBLADEN),
-    ]);
+    const geladen = await laadModel();
+    const profiel = await haalProfiel();
 
-    model = bouwModel(leesBron(bronRasters), leesBackend(backendRasters), vandaag());
-    toonOverzicht(model);
+    toonSchermen(geladen, {
+      naam: profiel.naam,
+      herlaad: () => laadModel(),
+      schrijfStatus: async (sleutel, status) => {
+        await bewaarStatus(i.backendSheetId, sleutel, status as TaakStand['status'], profiel.naam);
+      },
+      schrijfNotitie: async (sleutel, tekst) => {
+        await bewaarNotitie(i.backendSheetId, sleutel, tekst, profiel.naam);
+      },
+    });
   } catch (fout) {
     toon(meldFout(fout)
       + '<button class="knop" id="nogmaals">Opnieuw proberen</button>'
@@ -171,46 +197,6 @@ async function laadEnToon(): Promise<void> {
     $('#nogmaals').onclick = () => void laadEnToon();
     $('#instellen').onclick = () => void toonInrichten();
   }
-}
-
-function toonOverzicht(m: Model): void {
-  const kritiek = m.taken.filter((t) => t.gepland?.kritiek);
-  const klaar = m.taken.filter((t) => t.status === 'klaar').length;
-
-  toon(`
-    <h1>Verbouwing</h1>
-    <p class="uitleg">${m.taken.length} taken, ${klaar} af.
-      Loopt van ${veilig(m.begin)} tot ${veilig(m.einde)}.
-      Sleuteldatum ${veilig(m.sleuteldatum)}.</p>
-
-    <h2>Waarschuwingen</h2>
-    ${m.waarschuwingen.length
-      ? m.waarschuwingen.map((w) => `
-        <div class="melding ${veilig(w.ernst)}">
-          <strong>${veilig(w.kop)}</strong>
-          <span class="uitleg">${veilig(w.uitleg)}</span>
-        </div>`).join('')
-      : '<p class="goed">Niets aan de hand: volgorde, planning en levertijden kloppen.</p>'}
-
-    <h2>Kritiek pad</h2>
-    <p class="uitleg">Schuift hier iets, dan schuift het einde mee.</p>
-    <ol class="pad">${kritiek.map((t) =>
-      `<li>${veilig(t.naam)} <span class="uitleg">${veilig(t.gepland!.start)} tot
-        ${veilig(t.gepland!.eind)}</span></li>`).join('')}</ol>
-
-    ${m.nietIngedeeld.length ? `<h2>Niet ingedeeld</h2>
-      <p class="uitleg">Hier heeft de app niets van gemaakt; dat is beter dan iets verzinnen.</p>
-      <ul>${m.nietIngedeeld.map((t) => `<li>${veilig(t.naam)}</li>`).join('')}</ul>` : ''}
-
-    <div class="stap">
-      <button class="knop" id="verversen">Verversen</button>
-      <button class="knop rustig" id="instellingen">Sheets wijzigen</button>
-      <button class="knop rustig" id="uitloggen">Uitloggen</button>
-    </div>`);
-
-  $('#verversen').onclick = () => void laadEnToon();
-  $('#instellingen').onclick = () => void toonInrichten();
-  $('#uitloggen').onclick = () => { uitloggen(); toonInloggen(); };
 }
 
 // --- Opstarten --------------------------------------------------------------

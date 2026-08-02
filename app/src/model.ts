@@ -32,8 +32,19 @@ export interface Taak {
   categorie: string;
 }
 
+/** Een afhankelijkheid tussen twee taken, met de reden erbij. */
+export interface Koppeling {
+  voorSleutel: string;
+  naSleutel: string;
+  regelId: string;
+  uitleg: string;
+  handmatig: boolean;
+}
+
 export interface Model {
   taken: Taak[];
+  koppelingen: Koppeling[];
+  notities: BackendInhoud['notities'];
   waarschuwingen: Waarschuwing[];
   kringloop: boolean;
   sleuteldatum: string;
@@ -164,9 +175,23 @@ export function bouwModel(bron: Bron, backend: BackendInhoud, vandaag: string): 
 
   const gepland = taken.map((t) => t.gepland).filter((g): g is Gepland => g !== null);
 
+  const naam = (id: number) => taken[id - 1]?.sleutel ?? '';
+  const koppelingen: Koppeling[] = [
+    ...uitRegels.map((k) => ({
+      voorSleutel: naam(k.voorId), naSleutel: naam(k.naId),
+      regelId: k.regelId, uitleg: k.uitleg, handmatig: false,
+    })),
+    ...handmatigeKoppels.map((k) => ({
+      voorSleutel: naam(k.voorId), naSleutel: naam(k.naId),
+      regelId: '', uitleg: 'Met de hand gelegd.', handmatig: true,
+    })),
+  ];
+
   return {
     taken: taken.sort((a, b) =>
       (a.gepland?.start ?? '').localeCompare(b.gepland?.start ?? '') || a.naam.localeCompare(b.naam)),
+    koppelingen,
+    notities: backend.notities,
     waarschuwingen,
     kringloop,
     sleuteldatum,
