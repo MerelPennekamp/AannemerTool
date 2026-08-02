@@ -50,6 +50,9 @@ interface Window {
           client_id: string;
           scope: string;
           prompt?: string;
+          /** E-mailadres, zodat Google de accountkeuze kan overslaan. */
+          hint?: string;
+          select_account?: boolean;
           callback: (antwoord: GoogleTokenAntwoord) => void;
           error_callback?: (fout: { type?: string }) => void;
         }): GoogleTokenClient;
