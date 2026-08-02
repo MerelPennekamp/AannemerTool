@@ -10,6 +10,7 @@ import { leesBron, TABBLADEN } from './data/bron.js';
 import { leesBackend, legeInhoud, BACKEND_TABBLADEN } from './data/backend.js';
 import { bouwModel, type Model } from './model.js';
 import { toonSchermen } from './schermen.js';
+import { koppelDevKnop } from './devnotities.js';
 import { bewaarStatus, bewaarNotitie } from './data/opslaan.js';
 import type { TaakStand } from './data/backend.js';
 
@@ -228,4 +229,5 @@ async function begin(): Promise<void> {
   }
 }
 
+koppelDevKnop();
 void begin();

@@ -220,6 +220,7 @@
   .uitleg.klein { font-size: 13px; }
   .fout { color: var(--kritiek); }
   .goed { color: var(--goed); }
+  .dev-knop { float: right; margin-left: 10px; font-size: 13px; padding: 4px 10px; }
   .stap { border-top: 1px solid var(--rand); padding-top: 14px; margin-top: 18px; }
   .stap h2 { margin-top: 0; }
   .gekozen { font-size: 14px; margin: 6px 0 10px; }
@@ -236,12 +237,14 @@
 </head>
 <body>
 <header>
+  <button class="actie dev-knop" id="dev-knop" title="Suggestie voor de app">Suggestie</button>
   <h1>Verbouwing</h1>
   <div class="meta" id="kop">Laden...</div>
   <nav id="tabs"></nav>
 </header>
 <main id="inhoud"></main>
 <dialog id="detail"></dialog>
+<dialog id="dev-venster"></dialog>
 
 <script type="module" src="/src/start.ts"></script>
 </body>
