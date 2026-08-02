@@ -15,36 +15,6 @@ export interface Profiel {
   email: string;
 }
 
-interface TokenAntwoord {
-  access_token?: string;
-  expires_in?: number;
-  error?: string;
-  error_description?: string;
-}
-
-interface TokenClient {
-  requestAccessToken(opties?: { prompt?: string }): void;
-}
-
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        oauth2: {
-          initTokenClient(opties: {
-            client_id: string;
-            scope: string;
-            prompt?: string;
-            callback: (antwoord: TokenAntwoord) => void;
-            error_callback?: (fout: { type?: string }) => void;
-          }): TokenClient;
-          revoke(token: string, klaar?: () => void): void;
-        };
-      };
-    };
-  }
-}
-
 const GIS = 'https://accounts.google.com/gsi/client';
 
 let script: Promise<void> | null = null;
@@ -61,7 +31,7 @@ function laadGoogleScript(): Promise<void> {
   return script;
 }
 
-let client: TokenClient | null = null;
+let client: GoogleTokenClient | null = null;
 let token: string | null = null;
 let verlooptOp = 0;
 let profiel: Profiel | null = null;
@@ -69,7 +39,7 @@ let profiel: Profiel | null = null;
 /** Een halve minuut marge, zodat een verzoek niet halverwege verloopt. */
 const MARGE_MS = 30_000;
 
-async function maakClient(): Promise<TokenClient> {
+async function maakClient(): Promise<GoogleTokenClient> {
   if (client) return client;
   const config = await laadConfig();
   await laadGoogleScript();
