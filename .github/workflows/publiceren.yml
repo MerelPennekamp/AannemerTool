@@ -1,0 +1,77 @@
+name: Publiceren naar GitHub Pages
+
+# Bij elke wijziging op main opnieuw bouwen en publiceren, zodat de app op
+# telefoon en laptop vanzelf bijwerkt: pagina herladen is genoeg.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Loopt er al een publicatie, laat die dan afmaken in plaats van afbreken.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  bouwen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Afhankelijkheden installeren
+        working-directory: app
+        run: npm ci
+
+      - name: Tests
+        working-directory: app
+        run: npm test
+
+      - name: Typecheck
+        working-directory: app
+        run: npm run typecheck
+
+      # De sleutels van het Google Cloud-project staan als repository-secret,
+      # niet in de repo. Ze belanden wel in de gepubliceerde pagina, en dat
+      # hoort zo: een client-ID voor een browser-app is openbaar. De beveiliging
+      # zit in de toegestane adressen die in het Cloud-project staan.
+      - name: Sleutels klaarzetten
+        working-directory: app
+        env:
+          CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          if [ -z "$CLIENT_ID" ] || [ -z "$API_KEY" ]; then
+            echo "::error::GOOGLE_CLIENT_ID of GOOGLE_API_KEY ontbreekt bij Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          mkdir -p publiek
+          printf '{"clientId":"%s","apiKey":"%s"}\n' "$CLIENT_ID" "$API_KEY" > publiek/config.json
+
+      - name: Bouwen
+        working-directory: app
+        run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+  publiceren:
+    needs: bouwen
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.publicatie.outputs.page_url }}
+    steps:
+      - id: publicatie
+        uses: actions/deploy-pages@v4

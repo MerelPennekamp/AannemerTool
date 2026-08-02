@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verbouwing</title>
+<style>
+  :root {
+    --achtergrond: #fbfaf8; --kaart: #fff; --rand: #e3ded6; --tekst: #1c1a17;
+    --zacht: #6d675e; --accent: #7a5c3e; --kritiek: #a6432c; --goed: #3d6b45;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --achtergrond: #171614; --kaart: #211f1c; --rand: #35322d; --tekst: #ece8e1;
+      --zacht: #9b948a; --accent: #c8a077; --kritiek: #e08267; --goed: #86bb92;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 20px 16px; background: var(--achtergrond); color: var(--tekst);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  #app { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .07em;
+       color: var(--zacht); margin: 22px 0 8px; font-weight: 600; }
+  .uitleg { color: var(--zacht); font-size: 14px; margin: 4px 0 12px; }
+  .uitleg.klein { font-size: 13px; }
+  .goed { color: var(--goed); }
+  .fout { color: var(--kritiek); }
+  code { background: var(--kaart); border: 1px solid var(--rand); border-radius: 4px;
+         padding: 1px 4px; font-size: 13px; }
+  .knop {
+    background: var(--kaart); border: 1px solid var(--rand); border-radius: 8px;
+    padding: 9px 15px; font: inherit; color: var(--tekst); cursor: pointer;
+    margin: 0 6px 6px 0;
+  }
+  .knop:hover:not(:disabled) { border-color: var(--accent); }
+  .knop:disabled { opacity: .45; cursor: default; }
+  .knop.rustig { color: var(--zacht); }
+  .stap { border-top: 1px solid var(--rand); padding-top: 14px; margin-top: 18px; }
+  .stap h2 { margin-top: 0; }
+  .gekozen { font-size: 14px; margin: 6px 0 10px; }
+  .melding { background: var(--kaart); border: 1px solid var(--rand);
+             border-left: 3px solid var(--zacht); border-radius: 8px;
+             padding: 9px 12px; margin-bottom: 7px; }
+  .melding.kritiek { border-left-color: var(--kritiek); }
+  .melding.let-op { border-left-color: var(--accent); }
+  .melding strong { display: block; font-weight: 500; }
+  .melding .uitleg { margin: 2px 0 0; }
+  ol.pad, ul { padding-left: 20px; margin: 6px 0; }
+  ol.pad li, ul li { margin-bottom: 4px; }
+  ol.pad .uitleg { display: inline; margin: 0; }
+</style>
+</head>
+<body>
+<div id="app"><p class="uitleg">Laden...</p></div>
+<script type="module" src="/src/start.ts"></script>
+</body>
+</html>

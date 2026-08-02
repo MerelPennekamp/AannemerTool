@@ -30,3 +30,6 @@ app/test/fixtures/namen.local.json
 # De oude versie met een eigen server. Vervangen door app/, maar nog niet
 # weggegooid; bevat wel het adres van de echte bronsheet.
 server/
+
+# Bouwuitvoer
+app/dist/
