@@ -71,7 +71,11 @@ export async function token_(stil = true): Promise<string> {
     const c = oauth2.initTokenClient({
       client_id: config.clientId,
       scope: SCOPE,
-      prompt: stil ? '' : 'consent',
+      // Leeg betekent: geen enkel scherm tonen. Dat lukt als er al toestemming
+      // is en je nog bij Google ingelogd bent. Bij een gewone inlog laten we
+      // het weg, zodat Google zelf bepaalt of het toestemmingsscherm nodig is;
+      // 'consent' afdwingen zou je er elke keer doorheen sturen.
+      ...(stil ? { prompt: '' } : {}),
       callback: (antwoord) => {
         if (!antwoord.access_token) {
           mislukt(new NietIngelogd(antwoord.error_description ?? antwoord.error ?? 'geen toegang'));

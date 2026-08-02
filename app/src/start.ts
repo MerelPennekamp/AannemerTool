@@ -1,5 +1,5 @@
 import { laadConfig, ConfigOntbreekt } from './data/config.js';
-import { logIn, haalProfiel, isIngelogd, uitloggen, NietIngelogd } from './data/auth.js';
+import { logIn, haalProfiel, isIngelogd, uitloggen, token_, NietIngelogd } from './data/auth.js';
 import { kiesSpreadsheet } from './data/picker.js';
 import {
   haalTabbladen, haalTabbladnamen, maakSheet, zorgVoorTabbladen, schrijfTabblad,
@@ -214,7 +214,18 @@ async function begin(): Promise<void> {
   }
 
   if (isIngelogd()) return void verder();
-  toonInloggen();
+
+  // Na een herlaad is het token uit het geheugen verdwenen. Voor je opnieuw
+  // laat inloggen: stil een nieuw token vragen. Dat lukt zonder dat je iets
+  // ziet, zolang je al toestemming hebt gegeven en bij Google ingelogd bent.
+  toon('<p class="uitleg">Bezig met inloggen...</p>');
+  try {
+    await token_(true);
+    return void verder();
+  } catch {
+    // Niet gelukt: eerste keer, uitgelogd bij Google, of cookies geblokkeerd.
+    toonInloggen();
+  }
 }
 
 void begin();
